@@ -1,73 +1,84 @@
 # -*- coding: utf-8 -*-
 import scrapy
-from ..items import AmazonItem
+from ..items import AmazonItemProduct, AmazonItemSubcategory
+import sqlite3
 
-
-class AmazonSpider(scrapy.Spider):
-    name = 'amazon'
-    # allowed_domains = ['amazon.com']
-    start_urls = ['https://www.amazon.com/lighting-fans-works-with-alexa/b/ref=s9_acss_bw_cg_SHnav_2a1_w?ie=UTF8&node=13575748011&pf_rd_m=ATVPDKIKX0DER&pf_rd_s=merchandised-search-4&pf_rd_r=D8XG9GRM62XC3EFTESHT&pf_rd_t=101&pf_rd_p=692dc65d-102a-4ec7-ae02-609cf91cfed8&pf_rd_i=6563140011']
-    page_number = 1
+class AmazonSpiderSubcategory(scrapy.Spider):
+    name = 'amazon_subcategory'
+    start_urls = ['https://www.amazon.com/s?i=specialty-aps&srs=13575748011&qid=1587677057&ref=sr_pg_2']
+    page_number = 2
     total_number_of_pages = 0
 
     def parse(self, response):
-        items = AmazonItem()
-        if AmazonSpider.page_number > 1:
-            products = response.css('.s-result-item')
-        else:
-            products = response.css('.s-result-item.celwidget')
+        items = AmazonItemSubcategory()
+
+        products = response.css('div.s-latency-cf-section')
 
         print('Number of section:', len(products))
 
         category = response.css('#searchDropdownBox > option::text').extract_first()
 
         # total_number_of_pages = 0
-        # later_pages = response.css('.a-disabled::text').extract()
+        later_pages = response.css('li+ .a-disabled::text').extract()
         # total_number_of_pages = int(later_pages[0])if len(later_pages) > 0 and isinstance(later_pages[0], int) else 0
-        first_page = response.css('.pagnDisabled::text').extract()
-        AmazonSpider.total_number_of_pages = int(first_page[0]) if len(first_page) > 0 \
-            else AmazonSpider.total_number_of_pages
+        # first_page = response.css('.pagnDisabled::text').extract()
+        AmazonSpiderSubcategory.total_number_of_pages = int(later_pages[0]) if len(later_pages) > 0 \
+            else AmazonSpiderSubcategory.total_number_of_pages
 
         for product in products:
-            if AmazonSpider.page_number > 1:
-                name = product.css('span.a-text-normal::text').extract()
-                provider = product.css('.a-color-secondary+ .a-color-secondary').css('::text').extract()
-                price = product.css('.a-size-base::text').extract()
-                image_link = product.css('.s-image-fixed-height .s-image::attr(src)').extract()
-                amazon_certified = product.css('.a-text-bold').css('::text').extract()
-            else:
-                name = product.css('.s-access-title::text').extract()
-                provider = product.css('.a-color-secondary+ .a-color-secondary').css('::text').extract()
-                price = product.css('.a-size-base::text').extract()
-                image_link = product.css('.cfMarker::attr(src)').extract()
-                amazon_certified = product.css('.a-text-bold').css('::text').extract()
+            link = product.css('a.a-text-normal::attr(href)').extract()
+            image_link = product.css('.s-image-fixed-height .s-image::attr(src)').extract()
+            amazon_certified = product.css('.a-color-state').css('::text').extract()
 
-            items['name'] = name
-            items['provider'] = provider
-            items['price'] = price
+            items['link'] = link
             items['image_link'] = image_link
             items['amazon_certified'] = amazon_certified
             items['category'] = category
 
             yield items
-            AmazonSpider.page_number += 1
-            next_page = 'https://www.amazon.com/s?i=specialty-aps&srs=13575748011&page={}&qid=1587663347&swrs=67F5AD12950A1B3764A53CDF752C3D8B&ref=sr_pg_3'.format(AmazonSpider.page_number)
-            if AmazonSpider.page_number <= AmazonSpider.total_number_of_pages:
+
+            next_page = 'https://www.amazon.com/s?i=specialty-aps&srs=13575748011&page={}&qid=1587677102&ref=sr_pg_2'\
+                .format(AmazonSpiderSubcategory.page_number)
+            if AmazonSpiderSubcategory.page_number <= AmazonSpiderSubcategory.total_number_of_pages:
+                AmazonSpiderSubcategory.page_number += 1
                 yield response.follow(next_page, self.parse)
 
 
+class AmazonSpiderProduct(scrapy.Spider):
+    name = 'amazon_product'
+    # allowed_domains = ['amazon.com']
+    conn = sqlite3.connect("amazon.db")
+    cur = conn.cursor()
 
-            # print(len(name))
-            # print(len(provider))
-            # print(len(price))
-            # for index, row in enumerate(provider):
-            #     provider[index] = row.strip()
-            # print(name)
-            # print(provider)
-            # print(image_link)
-            # print(price)
+    links = cur.execute("""SELECT link from smart_home_db""").fetchall()
 
-        # items['name'] = name
-        # items['provider'] = provider
-        # items['price'] = price
-        # items['image_link'] = image_link
+    start_urls = [link[0] for link in links]
+
+    def parse(self, response):
+        items = AmazonItemProduct()
+
+        link = response.request.url
+        name = response.css('span#productTitle::text').extract()
+        provider = response.css('#bylineInfo::text').extract()
+        price = response.css(
+            '#sh-badge-v2-simple-total-price, #olp-upd-new .a-color-price, #comparison_price_row .a-text-bold'
+        ).css('::text').extract()
+
+        for index, row in enumerate(name):
+            name[index] = row.strip()
+
+        for index, row in enumerate(price):
+            price[index] = float(row.strip().replace('From', '').replace('$', ''))
+
+        print(name)
+        print(provider)
+        print(price)
+
+        items['link'] = link
+        items['name'] = name
+        items['provider'] = provider
+        items['price'] = price
+
+        yield items
+
+

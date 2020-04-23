@@ -9,13 +9,14 @@
 import sqlite3
 # import mysql.connector
 # import pymongo
+from .items import AmazonItemSubcategory, AmazonItemProduct
 
 
 class SpyderUnoPipeline(object):
 
     def __init__(self):
         self.create_connection()
-        self.create_table()
+        # self.create_table()
 
     def create_connection(self):
         # SQLite3
@@ -41,11 +42,12 @@ class SpyderUnoPipeline(object):
         # SQLite3 & MySQL
         self.cur.execute("""DROP TABLE IF EXISTS smart_home_db""")
         self.cur.execute("""CREATE TABLE smart_home_db(
+                            link text primary key,
                             name text,
                             provider text,
                             price integer,
                             image_link text,
-                            amazon_certified integer,
+                            amazon_certified float,
                             category text
                             )"""
                          )
@@ -56,15 +58,26 @@ class SpyderUnoPipeline(object):
 
     def store_db(self, item):
         # SQLite3
-        self.cur.execute("""INSERT INTO smart_home_db
-                            VALUES (?,?,?,?,?,?)""", (item['name'][0],
-                                                    item['provider'][0],
-                                                    item['price'][0].strip('$'),
-                                                    item['image_link'][0],
-                                                    1 if len(item['amazon_certified']) else 0,
-                                                    item['category']
-                                                    )
-                         )
+        if isinstance(item, AmazonItemSubcategory):
+            item['link'][0] = 'https://www.amazon.com' + item['link'][0]
+            self.cur.execute("""INSERT INTO smart_home_db(link, image_link, amazon_certified, category)
+                                VALUES (?,?,?,?)""", (
+                                                        item['link'][0],
+                                                        item['image_link'][0],
+                                                        1 if len(item['amazon_certified']) else 0,
+                                                        item['category']
+                                                        )
+                             )
+        elif isinstance(item, AmazonItemProduct):
+            self.cur.execute("""UPDATE smart_home_db
+                             set name=?, provider=?, price=?
+                             WHERE link =?""", (item['name'][0],
+                                                item['provider'][0],
+                                                item['price'][0] if len(item['price']) > 0 else 0,
+                                                item['link']
+                                                )
+                             )
+
         self.conn.commit()
 
         # MySQL
@@ -80,5 +93,5 @@ class SpyderUnoPipeline(object):
 
     def process_item(self, item, spider):
         self.store_db(item)
-        print("Pipeline: ", item['name'][0])
+        # print("Pipeline: ", item['name'][0])
         return item

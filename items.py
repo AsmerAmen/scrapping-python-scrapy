@@ -18,13 +18,20 @@ class SpyderUnoItem(scrapy.Item):
     tag = scrapy.Field()
 
 
-class AmazonItem(scrapy.Item):
-    # Amazon
-    name = scrapy.Field()
-    provider = scrapy.Field()
-    price = scrapy.Field()
+class AmazonItemSubcategory(scrapy.Item):
+    # Amazon Product
+    link = scrapy.Field()
     image_link = scrapy.Field()
     amazon_certified = scrapy.Field()
     category = scrapy.Field()
+
+
+class AmazonItemProduct(scrapy.Item):
+    link = scrapy.Field()
+    name = scrapy.Field()
+    provider = scrapy.Field()
+    price = scrapy.Field()
+
+
 
 
