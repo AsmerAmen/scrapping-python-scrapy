@@ -6,27 +6,41 @@ from ..items import AmazonItem
 class AmazonSpider(scrapy.Spider):
     name = 'amazon'
     # allowed_domains = ['amazon.com']
-    start_urls = ['https://www.amazon.com/s?bbn=283155&rh=n%3A283155%2Cp_n_publication_date%3A1250226011&dc&fst=as%3Aoff&qid=1587316220&rnid=1250225011&ref=lp_283155_nr_p_n_publication_date_0']
-
+    start_urls = ['https://www.amazon.com/lighting-fans-works-with-alexa/b/ref=s9_acss_bw_cg_SHnav_2a1_w?ie=UTF8&node=13575748011&pf_rd_m=ATVPDKIKX0DER&pf_rd_s=merchandised-search-4&pf_rd_r=D8XG9GRM62XC3EFTESHT&pf_rd_t=101&pf_rd_p=692dc65d-102a-4ec7-ae02-609cf91cfed8&pf_rd_i=6563140011']
+    
     def parse(self, response):
         items = AmazonItem()
 
-        name = response.css('.a-color-base.a-text-normal::text').extract()
-        # author = response.css('.a-row .a-size-base .a-color-secondary').css('.a-size-base .a-link-normal').css('::text').extract()
-        author = response.css('.sg-col-12-of-28 .a-color-secondary .a-size-base:nth-child(2)').css('::text').extract()
-        # price = response.css('').extract()
-        image_link = response.css('.s-image::attr(src)').extract()
+        products = response.css('.s-result-item.celwidget')
+        print('Number of section:', len(products))
+
+        for product in products:
+            name = product.css('.s-access-title::text').extract()
+            provider = product.css('.a-color-secondary+ .a-color-secondary').css('::text').extract()
+            price = product.css('.a-size-base::text').extract()
+            image_link = product.css('.cfMarker::attr(src)').extract()
+            amazon_certified = product.css('.a-text-bold').css('::text').extract()
+
+            items['name'] = name
+            items['provider'] = provider
+            items['price'] = price
+            items['image_link'] = image_link
+            items['amazon_certified'] = amazon_certified
+
+            yield items
 
 
-        print(len(name))
-        print(len(author))
-        for index, row in enumerate(author):
-            author[index] = row.strip()
-        print(name)
-        print(author)
-        print(image_link)
+            # print(len(name))
+            # print(len(provider))
+            # print(len(price))
+            # for index, row in enumerate(provider):
+            #     provider[index] = row.strip()
+            # print(name)
+            # print(provider)
+            # print(image_link)
+            # print(price)
 
         # items['name'] = name
-        # items['author'] = author
+        # items['provider'] = provider
         # items['price'] = price
         # items['image_link'] = image_link

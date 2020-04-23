@@ -21,8 +21,9 @@ class SpyderUnoItem(scrapy.Item):
 class AmazonItem(scrapy.Item):
     # Amazon
     name = scrapy.Field()
-    author = scrapy.Field()
+    provider = scrapy.Field()
     price = scrapy.Field()
     image_link = scrapy.Field()
+    amazon_certified = scrapy.Field()
 
 
