@@ -45,7 +45,8 @@ class SpyderUnoPipeline(object):
                             provider text,
                             price integer,
                             image_link text,
-                            amazon_certified integer
+                            amazon_certified integer,
+                            category text
                             )"""
                          )
 
@@ -56,11 +57,12 @@ class SpyderUnoPipeline(object):
     def store_db(self, item):
         # SQLite3
         self.cur.execute("""INSERT INTO smart_home_db
-                            VALUES (?,?,?,?,?)""", (item['name'][0],
+                            VALUES (?,?,?,?,?,?)""", (item['name'][0],
                                                     item['provider'][0],
                                                     item['price'][0].strip('$'),
                                                     item['image_link'][0],
-                                                    1 if len(item['amazon_certified']) else 0
+                                                    1 if len(item['amazon_certified']) else 0,
+                                                    item['category']
                                                     )
                          )
         self.conn.commit()

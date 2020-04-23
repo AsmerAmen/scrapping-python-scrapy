@@ -25,5 +25,6 @@ class AmazonItem(scrapy.Item):
     price = scrapy.Field()
     image_link = scrapy.Field()
     amazon_certified = scrapy.Field()
+    category = scrapy.Field()
 
 
