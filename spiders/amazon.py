@@ -102,6 +102,7 @@ class AmazonSpiderCrawler(scrapy.spiders.CrawlSpider):
         # Extract links matching 'item.php' and parse them with the spider's method parse_item
         Rule(LinkExtractor(
             # allow=('item\.php',)
+            deny=('display\.html',),
             restrict_css=('.bxc-grid__column--1-of-5.bxc-grid__column--light',),
             ),
              callback='parse_category'
@@ -114,7 +115,8 @@ class AmazonSpiderCrawler(scrapy.spiders.CrawlSpider):
         # ),
     )
 
-    def parse_product(self, response):
+    def parse_product(self, response, category):
+        link = response.request.url
         name = response.css('span#productTitle::text').extract()
         provider = response.css('#bylineInfo::text').extract()
         price = response.css(
@@ -130,17 +132,27 @@ class AmazonSpiderCrawler(scrapy.spiders.CrawlSpider):
         print(name)
         print(provider)
         print(price)
+        print(category)
 
+        items = AmazonItemProduct()
+        items['link'] = link
+        items['name'] = name
+        items['provider'] = provider
+        items['price'] = price
+        items['category'] = category
+
+        yield items
 
     def parse_category(self, response):
-        # open_in_browser(response)
         self.logger.info('Hi, this is an item page! %s', response.url)
 
-        # print('Asmer: %s' % response.css('a.a-text-normal::attr(href)').extract())
-        products_links = response.css('a.a-text-normal::attr(href)').extract()
+        products_links = response.css('div.s-latency-cf-section a.a-link-normal.a-text-normal, .s-access-detail-page').css('::attr(href)').extract()
+        category = response.css('#searchDropdownBox > option::text').extract_first()
 
         if len(products_links) > 0:
+            products_links = list(set(products_links))
             for link in products_links:
+                yield response.follow(link, self.parse_product, cb_kwargs=dict(category=category))
                 AmazonSpiderCrawler.products_links.append(link)
         print(len(AmazonSpiderCrawler.products_links))
 
@@ -150,13 +162,6 @@ class AmazonSpiderCrawler(scrapy.spiders.CrawlSpider):
             yield response.follow(next_page, self.parse_category)
 
 
-        # print(response.meta['link_text'])
-        # item = scrapy.Item()
-        # item['id'] = response.xpath('//td[@id="item_id"]/text()').re(r'ID: (\d+)')
-        # item['name'] = response.xpath('//td[@id="item_name"]/text()').get()
-        # item['description'] = response.xpath('//td[@id="item_description"]/text()').get()
-        # item['link_text'] = response.meta['link_text']
-        # return item
 
 
 

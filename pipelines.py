@@ -16,7 +16,7 @@ class SpyderUnoPipeline(object):
 
     def __init__(self):
         self.create_connection()
-        # self.create_table()
+        self.create_table()
 
     def create_connection(self):
         # SQLite3
@@ -58,26 +58,34 @@ class SpyderUnoPipeline(object):
 
     def store_db(self, item):
         # SQLite3
-        if isinstance(item, AmazonItemSubcategory):
-            item['link'][0] = 'https://www.amazon.com' + item['link'][0]
-            self.cur.execute("""INSERT INTO smart_home_db(link, image_link, amazon_certified, category)
-                                VALUES (?,?,?,?)""", (
-                                                        item['link'][0],
-                                                        item['image_link'][0],
-                                                        1 if len(item['amazon_certified']) else 0,
-                                                        item['category']
-                                                        )
-                             )
-        elif isinstance(item, AmazonItemProduct):
-            self.cur.execute("""UPDATE smart_home_db
-                             set name=?, provider=?, price=?
-                             WHERE link =?""", (item['name'][0],
-                                                item['provider'][0],
-                                                item['price'][0] if len(item['price']) > 0 else 0,
-                                                item['link']
-                                                )
-                             )
+        # if isinstance(item, AmazonItemSubcategory):
+        #     item['link'][0] = 'https://www.amazon.com' + item['link'][0]
+        #     self.cur.execute("""INSERT INTO smart_home_db(link, image_link, amazon_certified, category)
+        #                         VALUES (?,?,?,?)""", (
+        #                                                 item['link'][0],
+        #                                                 item['image_link'][0],
+        #                                                 1 if len(item['amazon_certified']) else 0,
+        #                                                 item['category']
+        #                                                 )
+        #                      )
+        # elif isinstance(item, AmazonItemProduct):
+        #     self.cur.execute("""UPDATE smart_home_db
+        #                      set name=?, provider=?, price=?
+        #                      WHERE link =?""", (item['name'][0],
+        #                                         item['provider'][0],
+        #                                         item['price'][0] if len(item['price']) > 0 else 0,
+        #                                         item['link']
+        #                                         )
+        #                      )
 
+        self.cur.execute("""INSERT INTO smart_home_db (name, provider, price, category,link)
+                             VALUES (?, ?, ?, ?, ?)""", (item['name'][0],
+                                                         item['provider'][0],
+                                                         item['price'][0] if len(item['price']) > 0 else 0,
+                                                         item['category'],
+                                                         item['link']
+                                                         )
+                         )
         self.conn.commit()
 
         # MySQL

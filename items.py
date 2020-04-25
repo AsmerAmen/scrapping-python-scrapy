@@ -31,6 +31,8 @@ class AmazonItemProduct(scrapy.Item):
     name = scrapy.Field()
     provider = scrapy.Field()
     price = scrapy.Field()
+    category = scrapy.Field()
+
 
 
 
