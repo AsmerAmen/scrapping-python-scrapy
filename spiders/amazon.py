@@ -90,6 +90,8 @@ class AmazonSpiderCrawler(scrapy.spiders.CrawlSpider):
     name = 'amazon_crawler'
     start_urls = ['https://www.amazon.com/gp/browse.html?node=6563140011&ref_=nav_em_0_2_8_2_amazon_smart_home']
 
+    products_links = []
+
     rules = (
         # Extract links matching 'category.php' (but not matching 'subsection.php')
         # and follow links from them (since no callback means follow=True by default).
@@ -102,8 +104,14 @@ class AmazonSpiderCrawler(scrapy.spiders.CrawlSpider):
             # allow=('item\.php',)
             restrict_css=('.bxc-grid__column--1-of-5.bxc-grid__column--light',),
             ),
-             callback='parse_item'
+             callback='parse_category'
         ),
+        # Rule(LinkExtractor(
+        #     # allow=('item\.php',)
+        #     restrict_css=('a.a-text-normal',),
+        # ),
+        #     callback='parse_product'
+        # ),
     )
 
     def parse_product(self, response):
@@ -124,14 +132,22 @@ class AmazonSpiderCrawler(scrapy.spiders.CrawlSpider):
         print(price)
 
 
-    def parse_item(self, response):
+    def parse_category(self, response):
         # open_in_browser(response)
         self.logger.info('Hi, this is an item page! %s', response.url)
 
         # print('Asmer: %s' % response.css('a.a-text-normal::attr(href)').extract())
         products_links = response.css('a.a-text-normal::attr(href)').extract()
-        for link in products_links:
-            yield response.follow(link, self.parse_product)
+
+        if len(products_links) > 0:
+            for link in products_links:
+                AmazonSpiderCrawler.products_links.append(link)
+        print(len(AmazonSpiderCrawler.products_links))
+
+        next_page = response.css('.pagnNext, .a-last a').css('::attr(href)').extract_first()
+        print(next_page)
+        if next_page:
+            yield response.follow(next_page, self.parse_category)
 
 
         # print(response.meta['link_text'])
