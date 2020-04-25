@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 import scrapy
+from scrapy.spiders import Rule
+from scrapy.utils.response import open_in_browser
+from scrapy.linkextractors import LinkExtractor
 from ..items import AmazonItemProduct, AmazonItemSubcategory
 import sqlite3
+
 
 class AmazonSpiderSubcategory(scrapy.Spider):
     name = 'amazon_subcategory'
@@ -80,5 +84,64 @@ class AmazonSpiderProduct(scrapy.Spider):
         items['price'] = price
 
         yield items
+
+
+class AmazonSpiderCrawler(scrapy.spiders.CrawlSpider):
+    name = 'amazon_crawler'
+    start_urls = ['https://www.amazon.com/gp/browse.html?node=6563140011&ref_=nav_em_0_2_8_2_amazon_smart_home']
+
+    rules = (
+        # Extract links matching 'category.php' (but not matching 'subsection.php')
+        # and follow links from them (since no callback means follow=True by default).
+        # Rule(LinkExtractor(restrict_css=('.bxc-grid__column--1-of-5.bxc-grid__column--light, #pagnNextString',)
+        #                    ),
+        #      ),
+
+        # Extract links matching 'item.php' and parse them with the spider's method parse_item
+        Rule(LinkExtractor(
+            # allow=('item\.php',)
+            restrict_css=('.bxc-grid__column--1-of-5.bxc-grid__column--light',),
+            ),
+             callback='parse_item'
+        ),
+    )
+
+    def parse_product(self, response):
+        name = response.css('span#productTitle::text').extract()
+        provider = response.css('#bylineInfo::text').extract()
+        price = response.css(
+            '#sh-badge-v2-simple-total-price, #olp-upd-new .a-color-price, #comparison_price_row .a-text-bold'
+        ).css('::text').extract()
+
+        for index, row in enumerate(name):
+            name[index] = row.strip()
+
+        for index, row in enumerate(price):
+            price[index] = float(row.strip().replace('From', '').replace('$', '').replace(',', ''))
+
+        print(name)
+        print(provider)
+        print(price)
+
+
+    def parse_item(self, response):
+        # open_in_browser(response)
+        self.logger.info('Hi, this is an item page! %s', response.url)
+
+        # print('Asmer: %s' % response.css('a.a-text-normal::attr(href)').extract())
+        products_links = response.css('a.a-text-normal::attr(href)').extract()
+        for link in products_links:
+            yield response.follow(link, self.parse_product)
+
+
+        # print(response.meta['link_text'])
+        # item = scrapy.Item()
+        # item['id'] = response.xpath('//td[@id="item_id"]/text()').re(r'ID: (\d+)')
+        # item['name'] = response.xpath('//td[@id="item_name"]/text()').get()
+        # item['description'] = response.xpath('//td[@id="item_description"]/text()').get()
+        # item['link_text'] = response.meta['link_text']
+        # return item
+
+
 
 
