@@ -146,7 +146,8 @@ class AmazonSpiderCrawler(scrapy.spiders.CrawlSpider):
     def parse_category(self, response):
         self.logger.info('Hi, this is an item page! %s', response.url)
 
-        products_links = response.css('div.s-latency-cf-section a.a-link-normal.a-text-normal, .s-access-detail-page').css('::attr(href)').extract()
+        products_links = response.css('div.s-latency-cf-section a.a-link-normal.a-text-normal, .s-access-detail-page'
+                                      ).css('::attr(href)').extract()
         category = response.css('#searchDropdownBox > option::text').extract_first()
 
         if len(products_links) > 0:
